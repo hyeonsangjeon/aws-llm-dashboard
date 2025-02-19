@@ -3,7 +3,7 @@ update.txt
 __pycache__/
 *.py[cod]
 *$py.class
-
+.vscode/
 # Virtual environments
 .env/
 .venv/
