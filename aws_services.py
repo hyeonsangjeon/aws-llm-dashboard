@@ -19,7 +19,7 @@ class AWSResourceCollector:
         self.rds = boto3.client('rds')
         self.lambda_client = boto3.client('lambda')
         self.s3 = boto3.client('s3')
-        self.ce = boto3.client('ce') # Cost Explorer 클라이언트 추가
+        self.ce = boto3.client('ce') # Cost Explorer 클라이언트 추가, https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ce.html
         
         self.service_mapping = {
             'EC2': 'Amazon Elastic Compute Cloud - Compute',
@@ -119,51 +119,63 @@ class AWSResourceCollector:
 # 리소스 비용 조회
 ## AWS Cost Explorer를 사용하여 특정 리소스의 비용 정보 조회
 ## 최근 30일간의 비용 데이터를 가져옴 --> 이부분도 Customizing 시에 변경해주세요!
-    
-    def get_resource_cost(self, resource_id, service_type, region):
-        """리소스별 비용 조회"""
-        try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-            
-            response = self.ce.get_cost_and_usage(
-                TimePeriod={
-                    'Start': start_date.strftime('%Y-%m-%d'),
-                    'End': end_date.strftime('%Y-%m-%d')
-                },
-                Granularity='MONTHLY',
-                Metrics=['UnblendedCost'],
-                Filter={
-                    'And': [
-                        {'Dimensions': {'Key': 'REGION', 'Values': [region]}},
-                        {'Dimensions': {'Key': 'SERVICE', 'Values': [self.service_mapping[service_type]]}},
-                    #    {'Dimensions': {'Key': 'SERVICE', 'Values': [self.service_mapping.get(service_type, service_type)]}},
-                    #    {'Dimensions': {'Key': 'RESOURCE_ID', 'Values': [resource_id]}}
-                    ]
-                }
-            )
-            print("service : ", [self.service_mapping[service_type]])
-            print(f"Cost Explorer response for {resource_id}: {response}", flush=True)  # 응답 출력
-            
-            if response['ResultsByTime']:
-                return float(response['ResultsByTime'][0]['Total']['UnblendedCost']['Amount'])
-            return 0.0
-            
-        except Exception as e:
-            print(f"Error getting resource cost: {str(e)}")
-            return 0.0
+#collect_ec2_data 메서드 내에서 호출:
+#collect_rds_data 메서드 내에서 호출:
+#collect_lambda_data 메서드 내에서 호출:
+#collect_s3_data 메서드 내에서 호출:
 
-    def get_jhs_cost(self, resource_id, service_type, region):
-        """리소스별 비용 조회"""
+    
+    # def get_resource_cost(self, resource_id, service_type, region):
+    #     """리소스별 비용 조회"""
+    #     try:
+    #         end_date = datetime.now()
+    #         start_date = end_date - timedelta(days=30)
+            
+    #         response = self.ce.get_cost_and_usage(
+    #             TimePeriod={
+    #                 'Start': start_date.strftime('%Y-%m-%d'),
+    #                 'End': end_date.strftime('%Y-%m-%d')
+    #             },
+    #             Granularity='MONTHLY',
+    #             Metrics=['UnblendedCost'],
+    #             Filter={
+    #                 'And': [
+    #                     {'Dimensions': {'Key': 'REGION', 'Values': [region]}},
+    #                     {'Dimensions': {'Key': 'SERVICE', 'Values': [self.service_mapping[service_type]]}},
+    #                 #    {'Dimensions': {'Key': 'SERVICE', 'Values': [self.service_mapping.get(service_type, service_type)]}},
+    #                 #    {'Dimensions': {'Key': 'RESOURCE_ID', 'Values': [resource_id]}}
+    #                 ]
+    #             }
+    #         )
+    #         print("service : ", [self.service_mapping[service_type]])
+    #         print(f"Cost Explorer response for {resource_id}: {response}", flush=True)  # 응답 출력
+            
+    #         if response['ResultsByTime']:
+    #             return float(response['ResultsByTime'][0]['Total']['UnblendedCost']['Amount'])
+    #         return 0.0
+            
+    #     except Exception as e:
+    #         print(f"Error getting resource cost: {str(e)}")
+    #         return 0.0
+
+
+    #When calling the GetCostAndUsageWithResources operation: 
+    #start date is the max supported days for hourly granularity is 14 days
+    def get_resource_cost(self, resource_id, service_type, region):
+        """리소스별 비용 조회 (get_cost_and_usage_with_resources 사용)"""
+        with_resources_days = 14
         try:
             end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
+            start_date = end_date - timedelta(days=with_resources_days)
             
+            # 필요에 따라 태그 정보도 가져옵니다.
             tags = self.ec2.describe_tags(Filters=[{'Name': 'resource-id', 'Values': [resource_id]}])['Tags']
             name_tag = next((tag['Value'] for tag in tags if tag['Key'] == 'Name'), None)
-            print(f"Tag name for resource {resource_id}: {name_tag}")
+            print("#############")
+            print(f"Res & Tag : {resource_id}: {name_tag}")
+            print("#############")
             
-            response = self.ce.get_cost_and_usage(
+            response = self.ce.get_cost_and_usage_with_resources(
                 TimePeriod={
                     'Start': start_date.strftime('%Y-%m-%d'),
                     'End': end_date.strftime('%Y-%m-%d')
@@ -174,12 +186,12 @@ class AWSResourceCollector:
                     'And': [
                         {'Dimensions': {'Key': 'REGION', 'Values': [region]}},
                         {'Dimensions': {'Key': 'SERVICE', 'Values': [self.service_mapping[service_type]]}},
-                        {'Tags': {'Key': 'Name', 'Values': [name_tag]}}
+                        {'Dimensions': {'Key': 'RESOURCE_ID', 'Values': [resource_id]}}
                     ]
                 }
             )
-            print("service : ", [self.service_mapping[service_type]])
-            print(f"Cost Explorer response for {resource_id}: {response}", flush=True)  # 응답 출력
+            print("service:", [self.service_mapping[service_type]])
+            print(f"Cost Explorer response for {resource_id}: {response}", flush=True)
             
             if response['ResultsByTime']:
                 return float(response['ResultsByTime'][0]['Total']['UnblendedCost']['Amount'])

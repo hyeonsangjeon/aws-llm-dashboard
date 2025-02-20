@@ -113,9 +113,108 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ## 샘플 쿼리 버튼
 ## 결과 표시 및 상세 정보 보기ㄱ
 
-with tab1:
-    debug_print("Rendering Resource Query tab")
+# with tab1:
+#     debug_print("Rendering Resource Query tab")
     
+#     with st.sidebar:
+#         st.header("Sample Queries")
+#         sample_queries = [
+#             "us-east-1 리전의 모든 EC2 인스턴스 보기",
+#             "us-east-1 리전의 RDS 리소스 목록",
+#             "Lambda 함수 목록 보기",
+#             "모든 S3 버킷 조회",
+#             "실행 중인 EC2 인스턴스 보기"
+#         ]
+        
+#         for query in sample_queries:
+#             if st.button(query):
+#                 st.session_state['user_input'] = query
+                
+#         st.header("Quick Filters")
+#         service_filter = st.multiselect(
+#             "Filter by Service",
+#             ["EC2", "RDS", "Lambda", "S3"],
+#             default=None
+#         )
+    
+
+#     user_input = st.text_area(
+#         "Enter your question about AWS resources:",
+#         value=st.session_state.get('user_input', ''),
+#         height=100,
+#         placeholder="Example: Show me all EC2 instances in us-west-2"
+#     )
+
+#     if st.button("Query Resources", type="primary"):
+#         if user_input:
+#             debug_print(f"Processing query: {user_input}")
+#             try:
+#                 db = DatabaseConnection()
+#                 results = db.execute_query(user_input)
+                
+#                 if results is not None and not results.empty:
+#                     st.subheader("Query Results:")
+                    
+#                     if service_filter:
+#                         results = results[results['service_type'].isin(service_filter)]
+                    
+#                     # 기본 정보 표시
+#                     display_cols = ['resource_id', 'service_type', 'region', 'status']
+#                     if 'cost' in results.columns:
+#                         display_cols.append('cost')
+                    
+#                     st.dataframe(
+#                         results[display_cols],
+#                         use_container_width=True,
+#                         hide_index=True
+#                     )
+                    
+#                     # 리소스 상세 정보 표시
+#                     if not results.empty:
+#                         st.subheader("Resource Details")
+#                         selected_resource = st.selectbox(
+#                             "Select a resource to view details:",
+#                             results['resource_id'].tolist()
+#                         )
+                        
+#                         if selected_resource:
+#                             resource_data = results[results['resource_id'] == selected_resource].iloc[0]
+                            
+#                             col1, col2, col3 = st.columns(3)
+#                             with col1:
+#                                 st.metric("Service Type", resource_data['service_type'])
+#                             with col2:
+#                                 st.metric("Status", resource_data['status'])
+#                             with col3:
+#                                 if 'cost' in resource_data:
+#                                     st.metric("Cost (30 days)", f"${resource_data['cost']:.2f}")
+                            
+#                             # 상세 정보 표시
+#                             if isinstance(resource_data.get('details'), dict):
+#                                 st.json(resource_data['details'])
+                            
+#                             # 태그 정보 표시
+#                             if resource_data.get('tags'):
+#                                 st.subheader("Tags")
+#                                 try:
+#                                     tags = json.loads(resource_data['tags'])
+#                                     st.json(tags)
+#                                 except:
+#                                     st.json(resource_data['tags'])
+                    
+#                     st.success("Query executed successfully!")
+#                 else:
+#                     st.info("No results found for this query.")
+                    
+#             except Exception as e:
+#                 st.error(f"Error processing query: {str(e)}")
+#                 debug_print(f"Error details: {str(e)}")
+#         else:
+#             st.warning("Please enter a query first.")
+with tab1:
+    debug_print("Rendering Resource Query tab")  # [원래 코드 유지]
+
+    # Sidebar 영역
     with st.sidebar:
         st.header("Sample Queries")
         sample_queries = [
@@ -125,19 +224,18 @@ with tab1:
             "모든 S3 버킷 조회",
             "실행 중인 EC2 인스턴스 보기"
         ]
-        
         for query in sample_queries:
             if st.button(query):
                 st.session_state['user_input'] = query
-                
+
         st.header("Quick Filters")
         service_filter = st.multiselect(
             "Filter by Service",
             ["EC2", "RDS", "Lambda", "S3"],
             default=None
         )
-    
 
+    # 사용자 입력 영역
     user_input = st.text_area(
         "Enter your question about AWS resources:",
         value=st.session_state.get('user_input', ''),
@@ -145,73 +243,75 @@ with tab1:
         placeholder="Example: Show me all EC2 instances in us-west-2"
     )
 
+    # [변경됨] "Query Resources" 버튼 클릭 시 무거운 쿼리를 한 번 실행하고 결과를 캐싱함.
     if st.button("Query Resources", type="primary"):
         if user_input:
-            debug_print(f"Processing query: {user_input}")
-            try:
-                db = DatabaseConnection()
-                results = db.execute_query(user_input)
-                
-                if results is not None and not results.empty:
-                    st.subheader("Query Results:")
-                    
-                    if service_filter:
-                        results = results[results['service_type'].isin(service_filter)]
-                    
-                    # 기본 정보 표시
-                    display_cols = ['resource_id', 'service_type', 'region', 'status']
-                    if 'cost' in results.columns:
-                        display_cols.append('cost')
-                    
-                    st.dataframe(
-                        results[display_cols],
-                        use_container_width=True,
-                        hide_index=True
-                    )
-                    
-                    # 리소스 상세 정보 표시
-                    if not results.empty:
-                        st.subheader("Resource Details")
-                        selected_resource = st.selectbox(
-                            "Select a resource to view details:",
-                            results['resource_id'].tolist()
-                        )
-                        
-                        if selected_resource:
-                            resource_data = results[results['resource_id'] == selected_resource].iloc[0]
-                            
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.metric("Service Type", resource_data['service_type'])
-                            with col2:
-                                st.metric("Status", resource_data['status'])
-                            with col3:
-                                if 'cost' in resource_data:
-                                    st.metric("Cost (30 days)", f"${resource_data['cost']:.2f}")
-                            
-                            # 상세 정보 표시
-                            if isinstance(resource_data.get('details'), dict):
-                                st.json(resource_data['details'])
-                            
-                            # 태그 정보 표시
-                            if resource_data.get('tags'):
-                                st.subheader("Tags")
-                                try:
-                                    tags = json.loads(resource_data['tags'])
-                                    st.json(tags)
-                                except:
-                                    st.json(resource_data['tags'])
-                    
-                    st.success("Query executed successfully!")
-                else:
-                    st.info("No results found for this query.")
-                    
-            except Exception as e:
-                st.error(f"Error processing query: {str(e)}")
-                debug_print(f"Error details: {str(e)}")
+            db = DatabaseConnection()                     # [변경됨]
+            results = db.execute_query(user_input)        # [변경됨]
+            st.session_state['results'] = results         # [변경됨: 결과 캐싱]
         else:
             st.warning("Please enter a query first.")
 
+    # [변경됨] 캐싱된 결과를 사용하여 화면 업데이트 (쿼리 재실행 없이)
+    if 'results' in st.session_state and st.session_state['results'] is not None:
+        results = st.session_state['results']
+        
+        if not results.empty:
+            st.subheader("Query Results:")
+            
+            # 서비스 필터 적용
+            if service_filter:
+                results = results[results['service_type'].isin(service_filter)]
+            
+            # 기본 정보 표시
+            display_cols = ['resource_id', 'service_type', 'region', 'status']
+            if 'cost' in results.columns:
+                display_cols.append('cost')
+            st.dataframe(results[display_cols], use_container_width=True, hide_index=True)
+            
+            st.subheader("Resource Details")
+            # 선택한 resource_id에 따른 업데이트를 위해 selectbox 사용
+            selected_resource = st.selectbox(
+                "Select a resource to view details:",
+                results['resource_id'].tolist(),
+                key="selected_resource"
+            )
+            
+            # [변경됨] 리소스 상세 정보를 업데이트할 빈 컨테이너 생성
+            details_placeholder = st.empty()
+            
+            # 선택한 resource_id에 해당하는 데이터 가져오기
+            resource_data = results[results['resource_id'] == selected_resource].iloc[0]
+            
+            with details_placeholder.container():
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Service Type", resource_data['service_type'])
+                with col2:
+                    st.metric("Status", resource_data['status'])
+                with col3:
+                    if 'cost' in resource_data:
+                        st.metric("Cost (30 days)", f"${resource_data['cost']:.2f}")
+                
+                # 상세 정보 표시
+                if isinstance(resource_data.get('details'), dict):
+                    st.json(resource_data['details'])
+                
+                # 태그 정보 표시
+                if resource_data.get('tags'):
+                    st.subheader("Tags")
+                    try:
+                        tags = json.loads(resource_data['tags'])
+                        st.json(tags)
+                    except Exception as e:
+                        st.json(resource_data['tags'])
+            
+            st.success("Query executed successfully!")
+        else:
+            st.info("No results found for this query.")       
+        
+        
+        
 # 탭 2: Cost Analysis
 ## 비용 분석 대시보드
 ## 예측 및 트렌드 표시
@@ -328,14 +428,10 @@ with tab3:
             status_color = "green" if resource['status'].lower() == "running" else "grey"
 
             # HTML로 제목 구성
-            if resource['status'].lower() == "running":
-                status_html = '<button style="background-color: green; color: white; border: none; padding: 5px 10px; border-radius: 3px;">Running</button>'
-            else:
-                status_html = f'<span style="color: {status_color};">{resource["status"]}</span>'
             title_html = f"""
             <div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
                 <b>Resource ID:</b> {resource['resource_id']} | <b>Tag:</b> {tags_output} |
-                <b>Status:</b> {status_html}
+                <b>Status:</b> <span style="color: {status_color};">{resource['status']}</span>
             </div>
             """
 
