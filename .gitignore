@@ -10,6 +10,11 @@ __pycache__/
 env/
 venv/
 
+tool.py
+
+python/
+layer.zip
+
 # Distribution / packaging
 build/
 develop-eggs/
